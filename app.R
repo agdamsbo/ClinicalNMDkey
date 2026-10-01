@@ -2,6 +2,7 @@
 # app.R – Neuro‑Motor Diagnostic Key (icons + italic notes)
 # --------------------------------------------------------------
 library(shiny)
+library(markdown) # loads the package, gives us markdownToHTML()
 
 # --------------------------------------------------------------
 # 1) Load the data -----------------------------------------------
@@ -183,28 +184,67 @@ ui <- fluidPage(
       name = "viewport",
       content = "width=device-width, initial-scale=1"
     ),
+    # ---- light modern CSS ----------------------------------------
     tags$style(HTML(
       "
       @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+
       :root{
-        --primary:#00695c;--bg:#fafafa;--card-bg:#ffffff;--text:#212121;--link:#0277bd;
+        --primary:#00695c;   /* teal */
+        --bg:#fafafa;        /* very light gray */
+        --card-bg:#ffffff;   /* white cards */
+        --text:#212121;      /* dark gray */
+        --link:#0277bd;      /* bright blue */
       }
-      body{font-family:'Roboto',Helvetica,Arial,sans-serif;background-color:var(--bg);
-            color:var(--text);margin:0;padding:0}
-      .container{max-width:800px;margin:0 auto;padding:1rem}
-      .card{background:var(--card-bg);border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.08);
-            padding:1rem;margin-bottom:1.5rem}
-      .card h4{color:var(--primary);margin-top:0;font-weight:500}
-      .form-control{height:2.7rem;font-size:1rem;border-radius:4px;
-            border:1px solid #cfd8dc}
-      .shiny-input-container{margin-bottom:1rem}
-      .diagnosis-list{margin-top:.5rem}
-      .diagnosis-list li{margin-bottom:.5rem;line-height:1.4}
-      a.source-link{color:var(--link);text-decoration:underline;font-size:.9rem;
-            margin-left:.3rem}
-      a.source-link:hover{opacity:.8}
-      .how-it-works ol{padding-left:1.2rem;margin-top:.5rem}
-      .how-it-works li{margin-bottom:.8rem;line-height:1.45}
+
+      body{
+        font-family:'Roboto',Helvetica,Arial,sans-serif;
+        background-color:var(--bg);
+        color:var(--text);
+        margin:0;padding:0;
+      }
+      .container{max-width:800px;margin:0 auto;padding:1rem;}
+      .card{
+        background:var(--card-bg);
+        border-radius:8px;
+        box-shadow:0 2px 6px rgba(0,0,0,.08);
+        padding:1rem;
+        margin-bottom:1.5rem;
+      }
+      .card h4{color:var(--primary);margin-top:0;font-weight:500;}
+      .form-control{
+        height:2.7rem;font-size:1rem;border-radius:4px;
+        border:1px solid #cfd8dc;
+      }
+      .shiny-input-container{margin-bottom:1rem;}
+      .diagnosis-table{width:100%;border-collapse:collapse;margin-top:.5rem;}
+      .diagnosis-table th,
+      .diagnosis-table td{
+        border:1px solid #e0e0e0;
+        padding:.4rem .6rem;
+        text-align:left;
+        vertical-align:top;
+      }
+      .diagnosis-table th{
+        background:#f5f5f5;
+        font-weight:500;
+      }
+      a.source-link{
+        color:var(--link);
+        text-decoration:underline;
+        font-size:.9rem;
+      }
+      a.source-link:hover{opacity:.8;}
+      .how-it-works ol{padding-left:1.2rem;margin-top:.5rem;}
+      .how-it-works li{margin-bottom:.8rem;line-height:1.45;}
+      .footer{
+        text-align:center;
+        font-size:.85rem;
+        color:#555;
+        margin-top:2rem;
+        padding:1rem 0;
+        border-top:1px solid #e0e0e0;
+      }
     "
     ))
   ),
@@ -247,7 +287,7 @@ ui <- fluidPage(
       ),
       tags$hr(),
       strong("Possible diagnosis(es):"),
-      uiOutput("dx_list", class = "diagnosis-list")
+      uiOutput("dx_table")
     ),
 
     # ------------ CLINICIAN‑FOCUSED EXPLANATION ------------
@@ -287,12 +327,17 @@ ui <- fluidPage(
         )
       )
     )
-  )
+  ),
+
+  # ---- Footer ----------------------------------------------------
+  tags$footer(class = "footer",
+              "Original key: © 2026 Steffen Birk • ",
+              a(href = "https://github.com/agdamsbo/ClinicalNMDkey", "GitHub Repo"))
 )
 
 
 # --------------------------------------------------------------
-# 3) Server -------------------------------------------------------
+# 3) Server -----------------------------------------------------
 # --------------------------------------------------------------
 server <- function(input, output, session) {
   ## 1️⃣ Supranuclear -------------------------------------------------
@@ -367,8 +412,8 @@ server <- function(input, output, session) {
     ignoreNULL = TRUE
   )
 
-  ## 5️⃣ Render diagnosis list (italic note, source link optional) --
-  output$dx_list <- renderUI({
+  ## 5️⃣ Render results as a table ---------------------------------
+  output$dx_table <- renderUI({
     req(input$supra, input$moda, input$anat, input$symm)
 
     hits <- key_df[
@@ -384,34 +429,49 @@ server <- function(input, output, session) {
       return(tags$em("No matching combination – should never happen."))
     }
 
-    items <- lapply(seq_len(nrow(hits)), function(i) {
+    # Build a <table> -------------------------------------------------
+    header <- tags$tr(
+      tags$th("Possible diagnosis"),
+      tags$th("Notes"),
+      tags$th("Further reading")
+    )
+
+    rows <- lapply(seq_len(nrow(hits)), function(i) {
       dx <- hits$diagnosis[i]
       note <- hits$note[i]
       src <- hits$source[i]
 
-      # Build the line: Diagnosis + optional *italic note* + optional link
-      line <- list(dx) # start with diagnosis
-      if (nzchar(note)) {
-        line <- c(line, tags$em(note)) # italic note
+      # Diagnosis cell – plain text
+      diag_cell <- tags$td(dx)
+
+      # Note cell – italic if there is a note, otherwise empty
+      note_cell <- if (nzchar(note)) {
+        tags$td(tags$em(note))
+      } else {
+        tags$td("") # empty cell
       }
-      if (!is.na(src) && nzchar(src)) {
+
+      # Source cell – clickable link only when URL is present
+      src_cell <- if (!is.na(src) && nzchar(src)) {
+        # ensure protocol is present
         if (!grepl("^https?://", src, ignore.case = TRUE)) {
           src <- paste0("http://", src)
         }
-        line <- c(
-          line,
-          tags$a(
-            href = src,
-            target = "_blank",
-            class = "source-link",
-            "[source]"
-          )
+        link_tag <- tags$a(
+          href = src,
+          target = "_blank",
+          class = "source-link",
+          "[source]"
         )
+        tags$td(link_tag)
+      } else {
+        tags$td("") # empty cell when no source
       }
-      tags$li(line)
+
+      tags$tr(diag_cell, note_cell, src_cell)
     })
 
-    tags$ul(items)
+    tags$table(class = "diagnosis-table", tags$thead(header), tags$tbody(rows))
   })
 }
 

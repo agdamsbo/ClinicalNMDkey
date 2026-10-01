@@ -6,7 +6,7 @@ shinylive::export(appdir = ".", destdir = "docs")
 #
 httpuv::runStaticServer(dir = "docs")
 #
-renv::install("shinylive")
+# renv::install("coatless-rpkg/shinyelectron")
 # library(shinyelectron)
 #
 # # Check your system
