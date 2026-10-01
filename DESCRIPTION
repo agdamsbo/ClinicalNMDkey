@@ -23,7 +23,6 @@ RoxygenNote: 7.3.3
 URL: https://github.com/agdamsbo/REDCapCAST, https://agdamsbo.github.io/REDCapCAST/
 BugReports: https://github.com/agdamsbo/REDCapCAST/issues
 Imports: 
-    markdown,
     shiny
 Language: en-US
 VignetteBuilder: knitr

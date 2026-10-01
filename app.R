@@ -2,7 +2,6 @@
 # app.R – Neuro‑Motor Diagnostic Key (icons + italic notes)
 # --------------------------------------------------------------
 library(shiny)
-library(markdown) # loads the package, gives us markdownToHTML()
 
 # --------------------------------------------------------------
 # 1) Load the data -----------------------------------------------
