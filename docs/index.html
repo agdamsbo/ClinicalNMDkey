@@ -1,28 +1,273 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Shiny App</title>
-    <script
-      src="./shinylive/load-shinylive-sw.js"
-      type="module"
-    ></script>
-    <script type="module">
-      import { runExportedApp } from "./shinylive/shinylive.js";
-      runExportedApp({
-        id: "root",
-        appEngine: "r",
-        relPath: "",
-      });
-    </script>
-    <link rel="stylesheet" href="./shinylive/style-resets.css" />
-    <link rel="stylesheet" href="./shinylive/shinylive.css" />
-    
-  </head>
-  <body>
-    
-    <div style="height: 100vh; width: 100vw" id="root"></div>
-    
-  </body>
+<head>
+<meta charset="UTF-8">
+<title>Clinical Neuromuscular Diagnostic Key</title>
+
+<!-- 1️⃣  Make the page responsive -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- 2️⃣  Font‑Awesome icons (same icons you used in Shiny) -->
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-xxxx" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<!-- 3️⃣  Light modern CSS (identical visual style) -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+
+:root{
+  --primary:#00695c;   /* teal */
+  --bg:#fafafa;        /* very light gray */
+  --card:#ffffff;      /* white cards */
+  --txt:#212121;       /* dark gray */
+  --link:#0277bd;      /* bright blue */
+}
+body{
+  font-family:'Roboto',Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--txt);
+  margin:0;padding:0;
+}
+.container{max-width:800px;margin:auto;padding:1rem;}
+.card{
+  background:var(--card);
+  border-radius:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+  padding:1rem;
+  margin-bottom:1.5rem;
+}
+.card h4{color:var(--primary);margin-top:0;font-weight:500;}
+select{
+  width:100%;height:2.7rem;font-size:1rem;
+  border-radius:4px;border:1px solid #cfd8dc;
+  margin-bottom:1rem;padding:.4rem .6rem;
+}
+table{width:100%;border-collapse:collapse;margin-top:.5rem;}
+th,td{border:1px solid #e0e0e0;padding:.4rem .6rem;vertical-align:top;}
+th{background:#f5f5f5;}
+a.source-link{color:var(--link);text-decoration:underline;font-size:.9rem;}
+a.source-link:hover{opacity:.8;}
+.how ol{padding-left:1.2rem;margin-top:.5rem;}
+.how li{margin-bottom:.8rem;line-height:1.45;}
+.footer{
+  text-align:center;font-size:.85rem;color:#555;
+  margin-top:2rem;padding:1rem 0;border-top:1px solid #e0e0e0;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h2 style="color:var(--primary);margin-bottom:.2rem;">
+    Clinical neuromuscular diagnostic key
+  </h2>
+
+  <!-- ====================== INPUT CARD ====================== -->
+  <div class="card">
+    <label>
+      <i class="fa-solid fa-sliders-h"></i> Modality
+      <select id="moda"></select>
+    </label>
+
+    <label>
+      <i class="fa-solid fa-project-diagram"></i> Anatomy
+      <select id="anat" disabled></select>
+    </label>
+
+    <label>
+      <i class="fa-solid fa-balance-scale"></i> Symmetry
+      <select id="symm" disabled></select>
+    </label>
+
+    <hr>
+    <strong>Possible diagnosis(es):</strong>
+    <div id="result"></div>
+  </div>
+
+  <!-- ====================== EXPLANATION CARD ====================== -->
+  <div class="card how">
+    <h4>How to use this key</h4>
+    <ol>
+      <li><strong><i class="fa-solid fa-sliders-h"></i>Choose the modality – </strong>
+          Select the clinical modality that is abnormal (motor, sensor, or both).</li>
+      <li><strong><i class="fa-solid fa-project-diagram"></i>Pick the anatomy – </strong>
+          Select the specific anatomical structure involved.</li>
+      <li><strong><i class="fa-solid fa-balance-scale"></i>Define the symmetry – </strong>
+          Indicate unilateral, bilateral, symmetrical, etc.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ====================== FOOTER ====================== -->
+<div class="footer">
+  Original key: © 2026 Steffen Birk •
+  <a href="https://github.com/agdamsbo/ClinicalNMDkey">GitHub Repo</a>
+</div>
+
+<!-- ====================== JAVASCRIPT ====================== -->
+<script>
+/* --------------------------------------------------------------
+   1️⃣  Nested data (modality → anatomy → symmetry → leaf list)
+   -------------------------------------------------------------- */
+const keyTree = {
+  "both": {
+    "single nerve": {
+      "all possible": [
+        {"diagnosis":"Mononeuritis/mononeuropatia","note":"","source":null}
+      ]
+    }
+  },
+  "motor": {
+    "ptosis": {
+      "unilateral": [
+        {"diagnosis":"Horner","note":"","source":null},
+        {"diagnosis":"Facialisparese","note":"","source":null},
+        {"diagnosis":"CPEO","note":"","source":null},
+        {"diagnosis":"Congenital ptosis","note":"","source":null},
+        {"diagnosis":"Dystrophia myotonica type 1","note":"","source":null},
+        {"diagnosis":"MG","note":"","source":null}
+      ],
+      "bilateral": [
+        {"diagnosis":"MG","note":"","source":null}
+      ]
+    },
+    "only ocular": {
+      "internal/external": [
+        {"diagnosis":"Botulism","note":"","source":null}
+      ],
+      "external": [
+        {"diagnosis":"CPEO","note":"","source":null},
+        {"diagnosis":"Miller-Fisher","note":"Includes ataxia and areflexia","source":null}
+      ],
+      "external m. udtrætning": [
+        {"diagnosis":"MG","note":"typically including ptosis","source":null}
+      ]
+    }
+  },
+  "sensor": {
+    "symmetrical": {
+      "extensive autonomous symptoms": [
+        {"diagnosis":"DM","note":"","source":null},
+        {"diagnosis":"Amyloidosis","note":"","source":null},
+        {"diagnosis":"Fabry","note":"","source":null}
+      ]
+    },
+    "distal symmetrical": {
+      "all modalities": [
+        {"diagnosis":"HIV","note":"","source":null},
+        {"diagnosis":"Hepatitis C","note":"","source":null},
+        {"diagnosis":"SLE","note":"","source":null},
+        {"diagnosis":"HSN","note":"","source":null}
+      ]
+    }
+  }
+};
+
+/* --------------------------------------------------------------
+   2️⃣  Helper to fill a <select> element
+   -------------------------------------------------------------- */
+function fillSelect(selectEl, options, placeholder) {
+  selectEl.innerHTML = `<option disabled selected>${placeholder}</option>`;
+  options.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    selectEl.appendChild(opt);
+  });
+  selectEl.disabled = false;
+}
+
+/* --------------------------------------------------------------
+   3️⃣  Populate the first selector (modality)
+   -------------------------------------------------------------- */
+const modaSel = document.getElementById('moda');
+const anatSel = document.getElementById('anat');
+const symSel  = document.getElementById('symm');
+const resultDiv = document.getElementById('result');
+
+function init() {
+  const modalities = Object.keys(keyTree);
+  fillSelect(modaSel, modalities, 'Select modality');
+}
+init();
+
+/* --------------------------------------------------------------
+   4️⃣  Cascading listeners (no filtering – just lookup)
+   -------------------------------------------------------------- */
+modaSel.addEventListener('change', () => {
+  const chosenMod = modaSel.value;
+  const anatomies = Object.keys(keyTree[chosenMod]);
+  fillSelect(anatSel, anatomies, 'Select anatomy');
+  symSel.innerHTML = '<option disabled selected>Select symmetry</option>';
+  symSel.disabled = true;
+  resultDiv.innerHTML = '';
+});
+
+anatSel.addEventListener('change', () => {
+  const m = modaSel.value;
+  const a = anatSel.value;
+  const symmetries = Object.keys(keyTree[m][a]);
+  fillSelect(symSel, symmetries, 'Select symmetry');
+  resultDiv.innerHTML = '';
+});
+
+symSel.addEventListener('change', () => {
+  const m = modaSel.value;
+  const a = anatSel.value;
+  const s = symSel.value;
+  const hits = keyTree[m][a][s];   // array of diagnosis objects
+
+  if (!hits || hits.length === 0) {
+    resultDiv.innerHTML = '<em>No matching combination.</em>';
+    return;
+  }
+
+  // ---- build result table ----
+  const table = document.createElement('table');
+  table.className = 'dx';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Diagnosis</th><th>Note</th><th>Source</th></tr>';
+  const tbody = document.createElement('tbody');
+
+  hits.forEach(rec => {
+    const tr = document.createElement('tr');
+
+    // Diagnosis cell
+    const tdDiag = document.createElement('td');
+    tdDiag.textContent = rec.diagnosis;
+    tr.appendChild(tdDiag);
+
+    // Note cell (italic if present)
+    const tdNote = document.createElement('td');
+    if (rec.note && rec.note.trim() !== '') {
+      const em = document.createElement('em');
+      em.textContent = rec.note;
+      tdNote.appendChild(em);
+    }
+    tr.appendChild(tdNote);
+
+    // Source cell (link only if URL present)
+    const tdSrc = document.createElement('td');
+    if (rec.source) {
+      let href = rec.source;
+      if (!/^https?:\/\//i.test(href)) href = 'http://' + href;
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.className = 'source-link';
+      a.textContent = '[source]';
+      tdSrc.appendChild(a);
+    }
+    tr.appendChild(tdSrc);
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  resultDiv.innerHTML = '';
+  resultDiv.appendChild(table);
+});
+</script>
+</body>
 </html>
